@@ -69,28 +69,36 @@ void getLocation() {
 char *getInputFromUser() {
     char ch;
     int size = 1;
+    int index = 0;
     char *str = (char *)malloc(size * sizeof(char));
-    if (!str) {
+    if (str == NULL) {
         fprintf(stderr, "Memory allocation failed\n");
         return NULL;
     }
 
     while ((ch = getchar()) != '\n') {
-        str[size - 1] = ch;
-        size++;
-        char *temp = realloc(str, size * sizeof(char));
-        if (!temp) {
-            fprintf(stderr, "Memory allocation failed\n");
-            free(str);
-            return NULL;
+        if (index == size - 1) { // Check if more space is needed
+            size *= 2; // Double the size
+            char *temp = realloc(str, size * sizeof(char));
+            if (temp == NULL) {
+                fprintf(stderr, "Memory allocation failed\n");
+                free(str);
+                return NULL;
+            }
+            str = temp;
         }
-        str = temp;
+        str[index++] = ch;
     }
-    str[size - 1] = '\0';
+    str[index] = '\0'; // Null-terminate the string
+
+    // Check if the input is "STOP"
+    if (index == 4 && str[0] == 'S' && str[1] == 'T' && str[2] == 'O' && str[3] == 'P') {
+        free(str);
+        return NULL;
+    }
 
     return str;
 }
-
 
 // The splitArgument function as requested
 char **splitArgument(char *str) {
@@ -170,34 +178,58 @@ char **splitArgument(char *str) {
     return arguments;
 }
 
+void logout(char *input) {
+    char command[10]; // Assuming "exit" won't be longer than 9 characters + '\0'
+    char rest[100]; // Assuming the rest of the input won't exceed 99 characters + '\0'
+
+    // Attempt to read the command "exit" from the input, ignoring spaces before and after
+    if (sscanf(input, " %9s %[^\n]", command, rest) == 1) {
+        // Check if the command is "exit" without using strcmp
+        if (command[0] == 'e' && command[1] == 'x' && command[2] == 'i' && command[3] == 't' && command[4] == '\0') {
+            free(input); // Free the memory
+            puts("Logging out..."); // Print the logout message
+            exit(EXIT_SUCCESS); // Exit the program successfully
+        }
+    }
+    // If we reached here, the input is not recognized as the "exit" command with extra characters
+    printf("Command not recognized: %s\n", input);
+}
+
+
 int main() {
     welcome(); // Display the welcome banner
     getLocation(); // Display location, username, and hostname information
 
-    printf("Enter your command: ");
-    char *userInput = getInputFromUser(); // Dynamically get input from the user
-    if (userInput == NULL) {
-        fprintf(stderr, "Failed to read input\n");
-        return 1;
-    }
+    while (1) {
+        printf("Enter your command: ");
+        char *userInput = getInputFromUser(); // Dynamically get input from the user
 
-    char **splitResults = splitArgument(userInput); // Split the user input into arguments
-    if (splitResults == NULL) {
-        free(userInput); // Remember to free userInput if splitArgument fails
-        return 1;
-    }
+        if (userInput == NULL) {
+            printf("STOP was entered or failed to read input. Exiting...\n");
+            break; // Exit the loop if "STOP" was entered or input reading failed
+        }
 
-    printf("Split Arguments:\n");
-    for (int i = 0; splitResults[i] != NULL; i++) {
-        printf("%s\n", splitResults[i]);
-    }
+        // Check if the user input is a logout command
+        // Assuming logout function does not terminate the program if the command is not "exit"
+        logout(userInput); 
 
-    // Free the allocated memory for splitResults
-    for (int i = 0; splitResults[i] != NULL; i++) {
-        free(splitResults[i]);
+        // Split the user input into arguments
+        char **splitResults = splitArgument(userInput);
+        if (splitResults != NULL) {
+            printf("Split Arguments:\n");
+            for (int i = 0; splitResults[i] != NULL; i++) {
+                printf("%s\n", splitResults[i]);
+            }
+
+            // Free the allocated memory for splitResults
+            for (int i = 0; splitResults[i] != NULL; i++) {
+                free(splitResults[i]);
+            }
+            free(splitResults);
+        }
+
+        free(userInput); // Free the userInput now that we're done with it
     }
-    free(splitResults);
-    free(userInput); // Also, free the userInput now that we're done with it
 
     return 0;
 }
