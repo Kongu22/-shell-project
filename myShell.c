@@ -188,13 +188,112 @@ void logout(char *input) {
         if (command[0] == 'e' && command[1] == 'x' && command[2] == 'i' && command[3] == 't' && command[4] == '\0') {
             free(input); // Free the memory
             puts("Logging out..."); // Print the logout message
+            sleep(1); // Delay for 1 second
+            puts("."); // Print the logout message
+            sleep(1); // Delay for 1 second
+            puts(".."); // Print the logout message
+            sleep(1); // Delay for 1 second
+            puts("..."); // Print the logout message
+            sleep(1); // Delay for 1 second
+            puts("Logged out successfully!"); // Print the logout message
+            sleep(1); // Delay for 1 second
+            puts("Have a good day :)"); // Print the logout message
             exit(EXIT_SUCCESS); // Exit the program successfully
         }
     }
     // If we reached here, the input is not recognized as the "exit" command with extra characters
-    printf("Command not recognized: %s\n", input);
+    // printf("Command not recognized: %s\n", input);
 }
 
+void cd(char **args) {
+    if (args[1] == NULL) {
+        fprintf(stderr, "-myShell: cd: missing argument\n");
+        return;
+    }
+
+    if (args[2] == NULL) { // Single argument path, directly use args[1]
+        if (chdir(args[1]) != 0) {
+            fprintf(stderr, "-myShell: cd: %s: No such file or directory\n", args[1]);
+        }
+        return; // Early return to avoid further processing
+    }
+
+    // If we reach here, it means there are multiple arguments potentially with quotes
+    char *path = (char *)malloc(BUFF_SIZE * sizeof(char));
+    if (path == NULL) {
+        fprintf(stderr, "Memory allocation failed\n");
+        return;
+    }
+    int pathIndex = 0; // Initialize the path index
+
+    for (int i = 1; args[i] != NULL; i++) {
+        char *part = args[i];
+        int startIndex = (i == 1 && part[0] == '\"') ? 1 : 0;
+        int endIndex = startIndex; // Initialize endIndex with startIndex
+
+        while (part[endIndex] != '\0' && !(i > 1 && part[endIndex] == '\"')) {
+            endIndex++;
+        }
+
+        // Copy characters from part to path
+        for (int j = startIndex; j < endIndex; j++) {
+            path[pathIndex++] = part[j];
+        }
+
+        // If the part ends with a closing quote, stop processing further arguments
+        if (part[endIndex] == '\"') {
+            break;
+        }
+
+        // Add a space between parts, but not after the last part
+        if (args[i + 1] != NULL) {
+            path[pathIndex++] = ' ';
+        }
+    }
+    path[pathIndex] = '\0'; // Null-terminate the concatenated path
+
+    if (chdir(path) != 0) {
+        fprintf(stderr, "-myShell: cd: %s: No such file or directory\n", path);
+    }
+
+    free(path); // Free allocated memory
+}
+
+void cp(char **args)
+{
+    if (args[1] == NULL || args[2] == NULL) {
+        printf("Error: Missing source or destination path.\n");
+        return;
+    }
+
+    char *srcPath = args[1];
+    char *destPath = args[2];
+    FILE *src, *dest;
+    char ch;
+
+    src = fopen(srcPath, "r");
+    if (src == NULL)
+    {
+        perror("Error opening source file");
+        return;
+    }
+    dest = fopen(destPath, "w");
+    if (dest == NULL)
+    {
+        perror("Error opening destination file");
+        fclose(src);
+        return;
+    }
+
+    while ((ch = fgetc(src)) != EOF)
+    {
+        fputc(ch, dest);
+    }
+
+    fclose(src);
+    fclose(dest);
+    printf("File copied successfully from %s to %s\n", srcPath, destPath);
+}
 
 int main() {
     welcome(); // Display the welcome banner
@@ -209,16 +308,22 @@ int main() {
             break; // Exit the loop if "STOP" was entered or input reading failed
         }
 
-        // Check if the user input is a logout command
-        // Assuming logout function does not terminate the program if the command is not "exit"
-        logout(userInput); 
+        logout(userInput); // Check for logout command
 
-        // Split the user input into arguments
         char **splitResults = splitArgument(userInput);
         if (splitResults != NULL) {
-            printf("Split Arguments:\n");
-            for (int i = 0; splitResults[i] != NULL; i++) {
-                printf("%s\n", splitResults[i]);
+            // Handling for the cd command
+            if (splitResults[0] != NULL && splitResults[0][0] == 'c' && splitResults[0][1] == 'd' && splitResults[0][2] == '\0') {
+                cd(splitResults);
+                getLocation(); // Update and display the current location
+            }
+            // Handling for the cp command
+            else if (splitResults[0] != NULL && splitResults[0][0] == 'c' && splitResults[0][1] == 'p' && splitResults[0][2] == '\0') {
+                if (splitResults[1] == NULL || splitResults[2] == NULL) {
+                    printf("Error: cp requires two arguments, the source and destination paths.\n");
+                } else {
+                    cp(splitResults);
+                }
             }
 
             // Free the allocated memory for splitResults
