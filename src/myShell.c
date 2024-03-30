@@ -3,13 +3,14 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <pwd.h>
-#include <limits.h> // For PATH_MAX
+#include <limits.h> 
 #include <errno.h>
-#include <sys/wait.h> // For wait()
-#include <libgen.h> // For basename()
+#include <sys/wait.h> 
+#include <libgen.h> 
 #include <string.h>
+#include "myShell.h"
 
-#define BUFF_SIZE PATH_MAX
+
 
 // Function prototypes for styling the output
 void bold() {
@@ -23,7 +24,7 @@ void blue() {
 void reset() {
     printf("\033[0m");
 }
-
+// Function to display the welcome banner
 void welcome() {
     printf("||=============================||\n");
     printf("||           __/o \\_           ||  Welcome to Daniel's shell\n");
@@ -111,7 +112,7 @@ void move(char **args) {
 
     char *srcPath = args[1];
     char *destPath = args[2];
-    char newPath[PATH_MAX];
+    char newPath[BUFF_SIZE];
 
     // Manually check if destPath is ".."
     if (destPath[0] == '.' && destPath[1] == '.') {
@@ -337,36 +338,42 @@ void deleteFile(char **args) {
 }
 // Function to create a pipe between two commands
 void mypipe(char **argv1, char **argv2) {
-    int fildes[2];
-    if (pipe(fildes) == -1) {
-        perror("pipe failed");
-        return;
-    }
-// Create the first child process
-    if (fork() == 0) {
-        close(fildes[0]); // Close unused read end in the first child
-        dup2(fildes[1], STDOUT_FILENO); // Redirect stdout to write end of the pipe
-        close(fildes[1]); // Close the write end after dup
-// Execute the first command
-        execvp(argv1[0], argv1);
-        perror("execvp failed for argv1"); // This will be executed only if execvp fails
-        exit(EXIT_FAILURE);
-    } else {
-        wait(NULL); // Wait for the first child to finish
-// Create the second child process
+    if (argv2 == NULL) {
+        // Если argv2 равен NULL, просто выполнить первую команду без создания канала
         if (fork() == 0) {
-            close(fildes[1]); // Close unused write end in the second child
-            dup2(fildes[0], STDIN_FILENO); // Redirect stdin to read end of the pipe
-            close(fildes[0]); // Close the read end after dup
-// Execute the second command
-            execvp(argv2[0], argv2);
-            perror("execvp failed for argv2"); // This will be executed only if execvp fails
+            execvp(argv1[0], argv1);
+            perror("Command execution error");
             exit(EXIT_FAILURE);
-        } else {
-            close(fildes[0]); // Parent closes both ends
-            close(fildes[1]);
-            wait(NULL); // Wait for the second child to finish
         }
+    } else {
+        int fildes[2];
+        if (pipe(fildes) == -1) {
+            perror("Error creating pipe");
+            return;
+        }
+
+        if (fork() == 0) {
+            close(fildes[0]);
+            dup2(fildes[1], STDOUT_FILENO);
+            close(fildes[1]);
+            execvp(argv1[0], argv1);
+            perror("first Command execution error");
+            exit(EXIT_FAILURE);
+        }
+
+        if (fork() == 0) {
+            close(fildes[1]);
+            dup2(fildes[0], STDIN_FILENO);
+            close(fildes[0]);
+            execvp(argv2[0], argv2);
+            perror("seond Command execution error");
+            exit(EXIT_FAILURE);
+        }
+
+        close(fildes[0]);
+        close(fildes[1]);
+        wait(NULL);
+        wait(NULL);
     }
 }
 // Function to append a string to a file
@@ -399,10 +406,10 @@ void echoppend(char **args) {
         for (int k = 0; args[j][k] != '\0'; k++) {
             totalLength++;
         }
-        if (j < i - 1) totalLength += 1; // Adjusted for clarity, same functionality
+        if (j < i - 1) totalLength += 1; 
     }
 
-    inputString = (char *)malloc(totalLength + 1); // +1 for the null terminator
+    inputString = (char *)malloc(totalLength + 1); 
     if (inputString == NULL) {
         perror("Failed to allocate memory for inputString");
         return;
@@ -416,10 +423,10 @@ void echoppend(char **args) {
             *currentPosition++ = *word++;
         }
         if (j < i - 1) {
-            *currentPosition++ = ' '; // Add space between words
+            *currentPosition++ = ' ';
         }
     }
-    *currentPosition = '\0'; // Null-terminate the input string
+    *currentPosition = '\0';
 
     // Open or create the file and append the input string
     FILE *file = fopen(filePath, "a");
@@ -429,7 +436,7 @@ void echoppend(char **args) {
         return;
     }
 
-    fprintf(file, "%s\n", inputString); // Append the string to the file
+    fprintf(file, "%s\n", inputString);
     fclose(file);
     free(inputString);
     printf("Appended to file: %s\n", filePath);
@@ -463,16 +470,15 @@ void echorite(char **args) {
         for (int k = 0; args[j][k] != '\0'; k++) {
             totalLength++;
         }
-        if (j < i - 1) totalLength++; // For space between words
+        if (j < i - 1) totalLength++; 
     }
 
-    inputString = (char *)malloc(totalLength + 1); // +1 for the null terminator
+    inputString = (char *)malloc(totalLength + 1);
     if (inputString == NULL) {
         perror("Failed to allocate memory for inputString");
         return;
     }
 
-    // Manually concatenate strings before the delimiter to form the input string
     char *currentPosition = inputString;
     for (int j = 0; j < i; j++) {
         char *word = args[j];
@@ -480,10 +486,10 @@ void echorite(char **args) {
             *currentPosition++ = *word++;
         }
         if (j < i - 1) {
-            *currentPosition++ = ' '; // Add space between words
+            *currentPosition++ = ' '; 
         }
     }
-    *currentPosition = '\0'; // Null-terminate the input string
+    *currentPosition = '\0'; 
 
     // Open or create the file and replace its content with the input string
     FILE *file = fopen(filePath, "w");
@@ -493,7 +499,7 @@ void echorite(char **args) {
         return;
     }
 
-    fprintf(file, "%s\n", inputString); // Write the string to the file
+    fprintf(file, "%s\n", inputString); 
     fclose(file);
     free(inputString);
     printf("File content replaced successfully: %s\n", filePath);
@@ -527,22 +533,19 @@ void processCommand(char *userInput) {
     char **argv2 = NULL;
     int pipeFound = 0;
 
-    // Iterate through splitResults to find '|'
     for (int i = 0; splitResults && splitResults[i] != NULL; i++) {
-        // Check if the first character is '|' and it's the only character in the string
         if (splitResults[i][0] == '|' && splitResults[i][1] == '\0') {
-            splitResults[i] = NULL; // Terminate the first command's argv with NULL
+            splitResults[i] = NULL;
             argv1 = splitResults;
             argv2 = &splitResults[i + 1];
             pipeFound = 1;
             break;
         }
     }
-
+// Check if a pipe was found
     if (pipeFound) {
         mypipe(argv1, argv2);
     } else {
-        // Handling commands without pipe
         if (splitResults[0] != NULL) {
             if (splitResults[0][0] == 'c' && splitResults[0][1] == 'd' && splitResults[0][2] == '\0') {
                 cd(splitResults);
@@ -569,7 +572,7 @@ void processCommand(char *userInput) {
                 }
             }else if (splitResults[0][0] == 'r' && splitResults[0][1] == 'f' && splitResults[0][2] == '\0') {
                 if (splitResults[1] != NULL) {
-                    readFile(&splitResults[1]); // Call your readFile function here
+                    readFile(&splitResults[1]); 
                 } else {
                     fprintf(stderr, "Error: rf requires a file path as an argument.\n");
                 }
