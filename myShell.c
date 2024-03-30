@@ -4,7 +4,9 @@
 #include <sys/types.h>
 #include <pwd.h>
 #include <limits.h> // For PATH_MAX
+#include <string.h> // For strcmp
 #include <errno.h>
+#include <sys/wait.h> // For wait()
 
 #define BUFF_SIZE PATH_MAX
 
@@ -89,7 +91,7 @@ char *getInputFromUser() {
         }
         str[index++] = ch;
     }
-    str[index] = '\0'; // Null-terminate the string
+    str[index] = '\0'; 
 
     // Check if the input is "STOP"
     if (index == 4 && str[0] == 'S' && str[1] == 'T' && str[2] == 'O' && str[3] == 'P') {
@@ -100,9 +102,9 @@ char *getInputFromUser() {
     return str;
 }
 
-// The splitArgument function as requested
+// Function to split the input string into arguments
 char **splitArgument(char *str) {
-    int size = 1; // Start with size 1 for the NULL terminator at the end
+    int size = 1; 
     char **arguments = (char **)malloc(size * sizeof(char *));
     if (arguments == NULL) {
         fprintf(stderr, "Memory allocation failed\n");
@@ -113,7 +115,7 @@ char **splitArgument(char *str) {
     int length = 0; // Length of a word
     for (int i = 0; str[i] != '\0'; ++i) {
         if (str[i] != ' ') {
-            ++length; // Increase word length if current character is not a space
+            ++length; 
         } else if (length > 0) { // End of a word found
             char *word = (char *)malloc((length + 1) * sizeof(char)); // Allocate memory for the word
             if (word == NULL) {
@@ -178,87 +180,81 @@ char **splitArgument(char *str) {
     return arguments;
 }
 
+// Function to logout the user if the input is "exit"
 void logout(char *input) {
-    char command[10]; // Assuming "exit" won't be longer than 9 characters + '\0'
-    char rest[100]; // Assuming the rest of the input won't exceed 99 characters + '\0'
+    char command[10];
+    char rest[100];
 
-    // Attempt to read the command "exit" from the input, ignoring spaces before and after
     if (sscanf(input, " %9s %[^\n]", command, rest) == 1) {
-        // Check if the command is "exit" without using strcmp
         if (command[0] == 'e' && command[1] == 'x' && command[2] == 'i' && command[3] == 't' && command[4] == '\0') {
-            free(input); // Free the memory
-            puts("Logging out..."); // Print the logout message
-            sleep(1); // Delay for 1 second
-            puts("."); // Print the logout message
-            sleep(1); // Delay for 1 second
-            puts(".."); // Print the logout message
-            sleep(1); // Delay for 1 second
-            puts("..."); // Print the logout message
-            sleep(1); // Delay for 1 second
-            puts("Logged out successfully!"); // Print the logout message
-            sleep(1); // Delay for 1 second
-            puts("Have a good day :)"); // Print the logout message
-            exit(EXIT_SUCCESS); // Exit the program successfully
+            free(input);
+            puts("Logging out...");
+            sleep(1);
+            puts(".");
+            sleep(1);
+            puts("..");
+            sleep(1);
+            puts("...");
+            sleep(1);
+            puts("Logged out successfully!");
+            sleep(1);
+            puts("Have a good day :)");
+            exit(EXIT_SUCCESS);
         }
     }
-    // If we reached here, the input is not recognized as the "exit" command with extra characters
-    // printf("Command not recognized: %s\n", input);
 }
 
+// Function to change directory using the "cd" command
 void cd(char **args) {
     if (args[1] == NULL) {
         fprintf(stderr, "-myShell: cd: missing argument\n");
         return;
     }
-
-    if (args[2] == NULL) { // Single argument path, directly use args[1]
+// Check if the path is enclosed in double quotes
+    if (args[2] == NULL) {
         if (chdir(args[1]) != 0) {
             fprintf(stderr, "-myShell: cd: %s: No such file or directory\n", args[1]);
         }
-        return; // Early return to avoid further processing
+        return;
     }
-
-    // If we reach here, it means there are multiple arguments potentially with quotes
     char *path = (char *)malloc(BUFF_SIZE * sizeof(char));
     if (path == NULL) {
         fprintf(stderr, "Memory allocation failed\n");
         return;
     }
-    int pathIndex = 0; // Initialize the path index
-
+    int pathIndex = 0;
+// Concatenate the path parts
     for (int i = 1; args[i] != NULL; i++) {
         char *part = args[i];
         int startIndex = (i == 1 && part[0] == '\"') ? 1 : 0;
-        int endIndex = startIndex; // Initialize endIndex with startIndex
+        int endIndex = startIndex;
 
         while (part[endIndex] != '\0' && !(i > 1 && part[endIndex] == '\"')) {
             endIndex++;
         }
-
-        // Copy characters from part to path
+// Copy the part to the path
         for (int j = startIndex; j < endIndex; j++) {
             path[pathIndex++] = part[j];
         }
-
-        // If the part ends with a closing quote, stop processing further arguments
+// Check if the path is enclosed in double quotes
         if (part[endIndex] == '\"') {
             break;
         }
-
-        // Add a space between parts, but not after the last part
+// Add a space between parts
         if (args[i + 1] != NULL) {
             path[pathIndex++] = ' ';
         }
     }
-    path[pathIndex] = '\0'; // Null-terminate the concatenated path
-
+    path[pathIndex] = '\0';
+// Change the directory
     if (chdir(path) != 0) {
         fprintf(stderr, "-myShell: cd: %s: No such file or directory\n", path);
     }
 
-    free(path); // Free allocated memory
+    free(path);
 }
 
+// Function to copy a file using the "cp" command
 void cp(char **args)
 {
     if (args[1] == NULL || args[2] == NULL) {
@@ -270,7 +266,7 @@ void cp(char **args)
     char *destPath = args[2];
     FILE *src, *dest;
     char ch;
-
+// Open the source file
     src = fopen(srcPath, "r");
     if (src == NULL)
     {
@@ -284,7 +280,7 @@ void cp(char **args)
         fclose(src);
         return;
     }
-
+// Copy the contents of the source file to the destination file
     while ((ch = fgetc(src)) != EOF)
     {
         fputc(ch, dest);
@@ -293,6 +289,99 @@ void cp(char **args)
     fclose(src);
     fclose(dest);
     printf("File copied successfully from %s to %s\n", srcPath, destPath);
+}
+// Function to delete a file using the "delete" command
+void deleteFile(char **args) {
+    if (args[1] == NULL) {
+        printf("Error: Missing file path to delete.\n");
+        return;
+    }
+// Delete the file
+    char *filePath = args[1];
+    if (unlink(filePath) != 0) {
+        perror("Error deleting file");
+    } else {
+        printf("File deleted successfully: %s\n", filePath);
+    }
+}
+// Function to create a pipe between two commands
+void mypipe(char **argv1, char **argv2) {
+    int fildes[2];
+    if (pipe(fildes) == -1) {
+        perror("pipe failed");
+        return;
+    }
+// Create the first child process
+    if (fork() == 0) {
+        close(fildes[0]); // Close unused read end in the first child
+        dup2(fildes[1], STDOUT_FILENO); // Redirect stdout to write end of the pipe
+        close(fildes[1]); // Close the write end after dup
+// Execute the first command
+        execvp(argv1[0], argv1);
+        perror("execvp failed for argv1"); // This will be executed only if execvp fails
+        exit(EXIT_FAILURE);
+    } else {
+        wait(NULL); // Wait for the first child to finish
+// Create the second child process
+        if (fork() == 0) {
+            close(fildes[1]); // Close unused write end in the second child
+            dup2(fildes[0], STDIN_FILENO); // Redirect stdin to read end of the pipe
+            close(fildes[0]); // Close the read end after dup
+// Execute the second command
+            execvp(argv2[0], argv2);
+            perror("execvp failed for argv2"); // This will be executed only if execvp fails
+            exit(EXIT_FAILURE);
+        } else {
+            close(fildes[0]); // Parent closes both ends
+            close(fildes[1]);
+            wait(NULL); // Wait for the second child to finish
+        }
+    }
+}
+// Function to process the user's command
+void processCommand(char *userInput) {
+    char **splitResults = splitArgument(userInput);
+    char **argv1 = NULL;
+    char **argv2 = NULL;
+    int pipeFound = 0;
+
+    // Iterate through splitResults to find '|'
+    for (int i = 0; splitResults && splitResults[i] != NULL; i++) {
+        // Check if the first character is '|' and it's the only character in the string
+        if (splitResults[i][0] == '|' && splitResults[i][1] == '\0') {
+            splitResults[i] = NULL; // Terminate the first command's argv with NULL
+            argv1 = splitResults;
+            argv2 = &splitResults[i + 1];
+            pipeFound = 1;
+            break;
+        }
+    }
+
+    if (pipeFound) {
+        mypipe(argv1, argv2);
+    } else {
+        // Handling commands without pipe
+       if (splitResults[0] != NULL) {
+            if (splitResults[0][0] == 'c' && splitResults[0][1] == 'd' && splitResults[0][2] == '\0') {
+                cd(splitResults);
+            } else if (splitResults[0][0] == 'c' && splitResults[0][1] == 'p' && splitResults[0][2] == '\0') {
+                cp(splitResults);
+            } else if (splitResults[0][0] == 'd' && splitResults[0][1] == 'e' && splitResults[0][2] == 'l' && splitResults[0][3] == 'e' && splitResults[0][4] == 't' && splitResults[0][5] == 'e' && splitResults[0][6] == '\0') {
+                deleteFile(splitResults);
+            } else if (splitResults[0][0] == 'p' && splitResults[0][1] == 'w' && splitResults[0][2] == 'd' && splitResults[0][3] == '\0') {
+                getLocation();
+            } else {
+                printf("Command not supported or incorrect usage.\n");
+            }
+        }
+    }
+// Free the memory allocated for splitResults
+    if (splitResults) {
+        for (int i = 0; splitResults[i] != NULL; i++) {
+            free(splitResults[i]);
+        }
+        free(splitResults);
+    }
 }
 
 int main() {
@@ -308,30 +397,9 @@ int main() {
             break; // Exit the loop if "STOP" was entered or input reading failed
         }
 
-        logout(userInput); // Check for logout command
+        logout(userInput);// Check if the user wants to logout
 
-        char **splitResults = splitArgument(userInput);
-        if (splitResults != NULL) {
-            // Handling for the cd command
-            if (splitResults[0] != NULL && splitResults[0][0] == 'c' && splitResults[0][1] == 'd' && splitResults[0][2] == '\0') {
-                cd(splitResults);
-                getLocation(); // Update and display the current location
-            }
-            // Handling for the cp command
-            else if (splitResults[0] != NULL && splitResults[0][0] == 'c' && splitResults[0][1] == 'p' && splitResults[0][2] == '\0') {
-                if (splitResults[1] == NULL || splitResults[2] == NULL) {
-                    printf("Error: cp requires two arguments, the source and destination paths.\n");
-                } else {
-                    cp(splitResults);
-                }
-            }
-
-            // Free the allocated memory for splitResults
-            for (int i = 0; splitResults[i] != NULL; i++) {
-                free(splitResults[i]);
-            }
-            free(splitResults);
-        }
+        processCommand(userInput); // Process the user's command
 
         free(userInput); // Free the userInput now that we're done with it
     }
