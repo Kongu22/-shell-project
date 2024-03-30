@@ -4,9 +4,10 @@
 #include <sys/types.h>
 #include <pwd.h>
 #include <limits.h> // For PATH_MAX
-#include <string.h> // For strcmp
 #include <errno.h>
 #include <sys/wait.h> // For wait()
+#include <libgen.h> // For basename()
+#include <string.h>
 
 #define BUFF_SIZE PATH_MAX
 
@@ -29,7 +30,7 @@ void welcome() {
     printf("||           \\____  \\          ||  Version 1.0\n");
     printf("||               /   \\         ||\n");
     printf("||         __   //\\   \\        ||\n");
-    printf("||      __/o \\-//--\\   \\_/     ||  https://github.com/<user>\n");
+    printf("||      __/o \\-//--\\   \\_/     ||  https://github.com/Kongu22\n");
     printf("||      \\____  ___  \\  |       ||\n");
     printf("||           ||   \\ |\\ |       ||  Happy crying!\n");
     printf("||          _||   _||_||       ||\n");
@@ -100,6 +101,36 @@ char *getInputFromUser() {
     }
 
     return str;
+}
+
+void move(char **args) {
+    if (args[1] == NULL || args[2] == NULL) {
+        printf("Error: Missing source or destination path.\n");
+        return;
+    }
+
+    char *srcPath = args[1];
+    char *destPath = args[2];
+    char newPath[PATH_MAX];
+
+    // Manually check if destPath is ".."
+    if (destPath[0] == '.' && destPath[1] == '.') {
+        // Moving back to parent directory
+        char *base = basename(srcPath); // Get the basename of the source path
+        snprintf(newPath, sizeof(newPath), "%s/%s", destPath, base);
+    } else {
+        // Normal move operation
+        snprintf(newPath, sizeof(newPath), "%s/%s", destPath, basename(srcPath));
+    }
+
+    if (rename(srcPath, newPath) == 0) {
+        printf("File moved successfully to %s\n", newPath);
+    } else {
+        perror("Ошибка при перемещении файла");
+        // Важно здесь завершить выполнение функции, чтобы избежать вывода последующего сообщения.
+        return;
+    }
+
 }
 
 // Function to split the input string into arguments
@@ -338,6 +369,157 @@ void mypipe(char **argv1, char **argv2) {
         }
     }
 }
+// Function to append a string to a file
+void echoppend(char **args) {
+    if (args[1] == NULL) {
+        printf("Error: Missing argument for echoppend.\n");
+        return;
+    }
+
+    char *inputString = NULL;
+    char *filePath = NULL;
+    int i = 0;
+
+//search for >> in the arguments
+    for (i = 0; args[i] != NULL; i++) {
+        if (args[i][0] == '>' && args[i][1] == '>' && args[i][2] == '\0' && args[i + 1] != NULL) {
+            filePath = args[i + 1]; 
+            break;
+        }
+    }
+
+    if (filePath == NULL) {
+        printf("Error: Missing file path in arguments.\n");
+        return;
+    }
+
+    // Calculate the total length for the input string
+    size_t totalLength = 0;
+    for (int j = 0; j < i; j++) {
+        for (int k = 0; args[j][k] != '\0'; k++) {
+            totalLength++;
+        }
+        if (j < i - 1) totalLength += 1; // Adjusted for clarity, same functionality
+    }
+
+    inputString = (char *)malloc(totalLength + 1); // +1 for the null terminator
+    if (inputString == NULL) {
+        perror("Failed to allocate memory for inputString");
+        return;
+    }
+
+    // Manually concatenate strings before the delimiter to form the input string
+    char *currentPosition = inputString;
+    for (int j = 0; j < i; j++) {
+        char *word = args[j];
+        while (*word) {
+            *currentPosition++ = *word++;
+        }
+        if (j < i - 1) {
+            *currentPosition++ = ' '; // Add space between words
+        }
+    }
+    *currentPosition = '\0'; // Null-terminate the input string
+
+    // Open or create the file and append the input string
+    FILE *file = fopen(filePath, "a");
+    if (file == NULL) {
+        perror("Error opening file");
+        free(inputString);
+        return;
+    }
+
+    fprintf(file, "%s\n", inputString); // Append the string to the file
+    fclose(file);
+    free(inputString);
+    printf("Appended to file: %s\n", filePath);
+}
+// replace the content of a file with a string
+void echorite(char **args) {
+    if (args[1] == NULL) {
+        printf("Error: Missing argument for echorite.\n");
+        return;
+    }
+
+    char *inputString = NULL;
+    char *filePath = NULL;
+    int i = 0;
+
+    for (i = 0; args[i] != NULL; i++) {
+        if (args[i][0] == '>' && args[i + 1] != NULL) {
+            filePath = args[i + 1];
+            break;
+        }
+    }
+
+    if (filePath == NULL) {
+        printf("Error: Missing file path in arguments.\n");
+        return;
+    }
+
+    // Calculate the total length for the input string
+    size_t totalLength = 0;
+    for (int j = 0; j < i; j++) {
+        for (int k = 0; args[j][k] != '\0'; k++) {
+            totalLength++;
+        }
+        if (j < i - 1) totalLength++; // For space between words
+    }
+
+    inputString = (char *)malloc(totalLength + 1); // +1 for the null terminator
+    if (inputString == NULL) {
+        perror("Failed to allocate memory for inputString");
+        return;
+    }
+
+    // Manually concatenate strings before the delimiter to form the input string
+    char *currentPosition = inputString;
+    for (int j = 0; j < i; j++) {
+        char *word = args[j];
+        while (*word) {
+            *currentPosition++ = *word++;
+        }
+        if (j < i - 1) {
+            *currentPosition++ = ' '; // Add space between words
+        }
+    }
+    *currentPosition = '\0'; // Null-terminate the input string
+
+    // Open or create the file and replace its content with the input string
+    FILE *file = fopen(filePath, "w");
+    if (file == NULL) {
+        perror("Error opening file");
+        free(inputString);
+        return;
+    }
+
+    fprintf(file, "%s\n", inputString); // Write the string to the file
+    fclose(file);
+    free(inputString);
+    printf("File content replaced successfully: %s\n", filePath);
+}
+
+void readFile(char **args) {
+    if (args[0] == NULL) {
+        printf("Error: File path not provided.\n");
+        return;
+    }
+
+    FILE *file = fopen(args[0], "r"); // Attempt to open the file for reading
+    if (file == NULL) {
+        perror("Error opening file"); // Print an error if the file cannot be opened
+        return;
+    }
+
+    char buffer[1024]; // Buffer for reading from the file
+    while (fgets(buffer, sizeof(buffer), file) != NULL) { // Read each line from the file
+        printf("%s", buffer); // Print the line to the console
+    }
+
+    fclose(file); // Close the file after reading its contents
+}
+
+
 // Function to process the user's command
 void processCommand(char *userInput) {
     char **splitResults = splitArgument(userInput);
@@ -361,21 +543,41 @@ void processCommand(char *userInput) {
         mypipe(argv1, argv2);
     } else {
         // Handling commands without pipe
-       if (splitResults[0] != NULL) {
+        if (splitResults[0] != NULL) {
             if (splitResults[0][0] == 'c' && splitResults[0][1] == 'd' && splitResults[0][2] == '\0') {
                 cd(splitResults);
+                getLocation();
             } else if (splitResults[0][0] == 'c' && splitResults[0][1] == 'p' && splitResults[0][2] == '\0') {
                 cp(splitResults);
-            } else if (splitResults[0][0] == 'd' && splitResults[0][1] == 'e' && splitResults[0][2] == 'l' && splitResults[0][3] == 'e' && splitResults[0][4] == 't' && splitResults[0][5] == 'e' && splitResults[0][6] == '\0') {
+            } else if (splitResults[0][0] == 'r' && splitResults[0][1] == 'm' && splitResults[0][2] == '\0') {
                 deleteFile(splitResults);
             } else if (splitResults[0][0] == 'p' && splitResults[0][1] == 'w' && splitResults[0][2] == 'd' && splitResults[0][3] == '\0') {
                 getLocation();
-            } else {
+            } else if (splitResults[0][0] == 'm' && splitResults[0][1] == 'v' && splitResults[0][2] == '\0') {
+                move(splitResults);
+            } else if (splitResults[0][0] == 'e' && splitResults[0][1] == 'c' && splitResults[0][2] == 'h' && splitResults[0][3] == 'o' && splitResults[0][4] == '\0') {
+                if (splitResults[1] != NULL && splitResults[2] != NULL) {
+                    echoppend(&splitResults[1]);
+                } else {
+                    fprintf(stderr, "Error: echoppend requires two arguments.\n");
+                }
+            } else if (splitResults[0][0] == 'e' && splitResults[0][1] == 'r' && splitResults[0][2] == '\0') {
+                if (splitResults[1] != NULL && splitResults[2] != NULL) {
+                    echorite(&splitResults[1]); 
+                } else {
+                    fprintf(stderr, "Error: echorite requires arguments.\n");
+                }
+            }else if (splitResults[0][0] == 'r' && splitResults[0][1] == 'f' && splitResults[0][2] == '\0') {
+                if (splitResults[1] != NULL) {
+                    readFile(&splitResults[1]); // Call your readFile function here
+                } else {
+                    fprintf(stderr, "Error: rf requires a file path as an argument.\n");
+                }
                 printf("Command not supported or incorrect usage.\n");
             }
         }
     }
-// Free the memory allocated for splitResults
+    // Free the memory allocated for splitResults
     if (splitResults) {
         for (int i = 0; splitResults[i] != NULL; i++) {
             free(splitResults[i]);
@@ -383,6 +585,7 @@ void processCommand(char *userInput) {
         free(splitResults);
     }
 }
+
 
 int main() {
     welcome(); // Display the welcome banner
