@@ -124,7 +124,7 @@ void move(char **args) {
     if (rename(srcPath, newPath) == 0) {
         printf("File moved successfully to %s\n", newPath);
     } else {
-        perror("faild to move file");
+        perror("Faild to move file");
         return;
     }
 
@@ -227,6 +227,59 @@ void logout(char *input) {
             puts("Logged out successfully!");
             sleep(1);
             puts("Have a good day :)");
+            sleep(1);        
+            printf("                      _..--''`-...\n"
+                    "                    -'             `-\n"
+                    "                 .-'                  `-\n"
+                    "                /   .-'''''''''--.       \\\n"
+                    "                |  /__........_   `-.    |\n"
+                    "                 \\ / -. .--._  ``-._ |   /\n"
+                    "                  / /\\ V //  `--._ -`-  /\n"
+                    "                 / / || | |       \\\\ `\\/\n"
+                    "                  |  || |\\|        \\\\ \\\n"
+                    "                 /| // /-._   _... ||  \\\n"
+                    "                //\\ \\ /      ||\\\\|   TO PROTECT\n"
+                    "                /  \\//     /      // |\\\\    AND SERVE\n"
+                    "                \\| \\\\_\\    ._/   // /|//\n"
+                    "                 |\\ //|\\  .__.   / / |//\n"
+                    "                  \\|/// \\ `=='  / / ///\n"
+                    "                   \\//  |\\    .' / // -.\n"
+                    "                       /-.`--' -'.' |   `------.\n"
+                    "                _..---' \\ `-..-'   /            \\            .\n"
+                    "             .-'         \\  /@ \\  /              \\         . \\\\\n"
+                    "            |     .$.     \\/.--.\\/_               \\       /|#||\n"
+                    "            /     $$$  _-'         `-\\       /     .    .'  #||\n"
+                    "           .   \\  `$' /               \\      |     |   :   _#/\n"
+                    "           |    |    /           /    /      \\     |   |  / #\n"
+                    "           |    /    `.     \\   /    /        \\    |   /  : 6\n"
+                    "           |   /       `-.      .   /          |   |  /   ' 9\n"
+                    "           |  |           `-/.___.-'           |.==\\.'   /.-6-.\n"
+                    "           |  |            /      \\            |   /    /((   ))\n"
+                    "           |`= \\        ..-    @   \\          /   /    :  `-.-'\n"
+                    "          |     `..___--            `--..__.-'  .'     :\n"
+                    "          '      |\\            @            /| /      /\n"
+                    "         /       :|___________...._________/ \\       /\n"
+                    "        .        /|                       /   \\     /\n"
+                    "        :       / /                      /     `._.'\n"
+                    "        |     .'/ \\                    /\n"
+                    "        |     :/    `.                 |\n"
+                    "        |    /'       `-.              |\n"
+                    "        :   /            `-.  c     _.'\\\n"
+                    "       /   /                `-..--''    \\\n"
+                    "      /   /       .                     |\n"
+                    "     /   /`-.       .       @           |\n"
+                    "    .-- \\    `-._    .             .    |\n"
+                    "  _/    \\\\_______\\______________________/____\n"
+                    "((_\\\\\\|u((_________________________________)\n"
+                    "    `---|             \\       __..---''\n"
+                    "        \\              \\ _.--'        |\n"
+                    "                        /             /\n"
+                    "         \\             /\n"
+                    "                      |              /\n"
+                    "          \\           |\n"
+                    "           \\          |             /\n"
+                    "            \\         |    :F_P:   /\n"
+                    "             \\        |           /");
             exit(EXIT_SUCCESS);
         }
     }
@@ -499,6 +552,7 @@ void echorite(char **args) {
     printf("File content replaced successfully: %s\n", filePath);
 }
 
+//  read the content of a file
 void readFile(char **args) {
     if (args[0] == NULL) {
         printf("Error: File path not provided.\n");
@@ -519,6 +573,45 @@ void readFile(char **args) {
     fclose(file); // Close the file after reading its contents
 }
 
+// Function to count the number of lines or words in a file
+void wordCount(char **args) {
+    if (args[1] == NULL || args[2] == NULL) {
+        printf("Error: Missing option or file path.\n");
+        return;
+    }
+
+    char *option = args[1];
+    char *filePath = args[2];
+    FILE *file = fopen(filePath, "r");
+    if (file == NULL) {
+        printf("Error: File does not exist.\n");
+        return;
+    }
+
+    int count = 0;
+    count++;
+    if (option[0] == '-' && option[1] == 'l' && option[2] == '\0') { // Count lines
+        char ch;
+        while (!feof(file)) {
+            ch = fgetc(file);
+            if (ch == '\n') {
+                count++;
+            }
+        }
+        printf("Number of lines: %d\n", count);
+    } else if (option[0] == '-' && option[1] == 'w' && option[2] == '\0') { // Count words
+        char word[1024];
+        while (fscanf(file, " %1023s", word) == 1) {
+            count++;
+        }
+        printf("Number of words: %d\n", count);
+    } else {
+        printf("Error: Invalid option.\n");
+    }
+
+    fclose(file);
+}
+
 
 // Function to process the user's command
 void processCommand(char *userInput) {
@@ -536,7 +629,7 @@ void processCommand(char *userInput) {
             break;
         }
     }
-// Check if a pipe was found
+    // Check if a pipe was found
     if (pipeFound) {
         mypipe(argv1, argv2);
     } else {
@@ -564,19 +657,21 @@ void processCommand(char *userInput) {
                 } else {
                     fprintf(stderr, "Error: echorite requires arguments.\n");
                 }
-            }else if (splitResults[0][0] == 'r' && splitResults[0][1] == 'f' && splitResults[0][2] == '\0') {
+            } else if (splitResults[0][0] == 'r' && splitResults[0][1] == 'f' && splitResults[0][2] == '\0') {
                 if (splitResults[1] != NULL) {
                     readFile(&splitResults[1]); 
                 } else {
                     fprintf(stderr, "Error: rf requires a file path as an argument.\n");
                 }
+            } else if (splitResults[0][0] == 'w' && splitResults[0][1] == 'c' && splitResults[0][2] == '\0') {
+                wordCount(splitResults);
+            } else {
                 printf("Command not supported or incorrect usage.\n");
             }
         }
     }
     // Free the memory allocated for splitResults
     if (splitResults) {
-
         for (int i = 0; splitResults[i] != NULL; i++) {
             free(splitResults[i]);
         }
