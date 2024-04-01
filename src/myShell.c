@@ -103,7 +103,7 @@ char *getInputFromUser() {
 
     return str;
 }
-
+// Function to move a file using the "mv" command
 void move(char **args) {
     if (args[1] == NULL || args[2] == NULL) {
         printf("Error: Missing source or destination path.\n");
@@ -114,21 +114,17 @@ void move(char **args) {
     char *destPath = args[2];
     char newPath[BUFF_SIZE];
 
-    // Manually check if destPath is ".."
     if (destPath[0] == '.' && destPath[1] == '.') {
-        // Moving back to parent directory
-        char *base = basename(srcPath); // Get the basename of the source path
+        char *base = basename(srcPath);
         snprintf(newPath, sizeof(newPath), "%s/%s", destPath, base);
     } else {
-        // Normal move operation
         snprintf(newPath, sizeof(newPath), "%s/%s", destPath, basename(srcPath));
     }
 
     if (rename(srcPath, newPath) == 0) {
         printf("File moved successfully to %s\n", newPath);
     } else {
-        perror("Ошибка при перемещении файла");
-        // Важно здесь завершить выполнение функции, чтобы избежать вывода последующего сообщения.
+        perror("faild to move file");
         return;
     }
 
@@ -161,7 +157,7 @@ char **splitArgument(char *str) {
             for (int j = 0; j < length; j++) {
                 word[j] = str[start + j];
             }
-            word[length] = '\0'; // Null-terminate the word
+            word[length] = '\0'; 
             arguments[size - 1] = word;
             size++;
             arguments = (char **)realloc(arguments, size * sizeof(char *));
@@ -339,7 +335,6 @@ void deleteFile(char **args) {
 // Function to create a pipe between two commands
 void mypipe(char **argv1, char **argv2) {
     if (argv2 == NULL) {
-        // Если argv2 равен NULL, просто выполнить первую команду без создания канала
         if (fork() == 0) {
             execvp(argv1[0], argv1);
             perror("Command execution error");
@@ -415,7 +410,6 @@ void echoppend(char **args) {
         return;
     }
 
-    // Manually concatenate strings before the delimiter to form the input string
     char *currentPosition = inputString;
     for (int j = 0; j < i; j++) {
         char *word = args[j];
@@ -582,6 +576,7 @@ void processCommand(char *userInput) {
     }
     // Free the memory allocated for splitResults
     if (splitResults) {
+
         for (int i = 0; splitResults[i] != NULL; i++) {
             free(splitResults[i]);
         }
